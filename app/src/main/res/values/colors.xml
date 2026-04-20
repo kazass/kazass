@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#1A1A2E</color>
+    <color name="player_tank">#FFDD00</color>
+    <color name="enemy_tank">#888888</color>
+</resources>
