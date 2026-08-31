@@ -10,7 +10,7 @@ public class TouchController {
 
     // Touch tracking for D-pad (pointer ID)
     private int dpadPointerId = -1;
-    private float dpadOriginX, dpadOriginY;
+    private float dpadCenterX, dpadCenterY;
 
     // Touch tracking for fire button
     private int firePointerId = -1;
@@ -20,8 +20,22 @@ public class TouchController {
 
     private float fireZoneBoundary; // x pixel where fire zone starts
 
-    public void setScreenWidth(int screenWidth) {
+    public void setScreenSize(int screenWidth, int screenHeight, int mapBottom) {
         fireZoneBoundary = screenWidth * 0.6f;
+        dpadCenterX = fireZoneBoundary * 0.5f;
+        dpadCenterY = mapBottom + Math.max(0, screenHeight - mapBottom) * 0.5f;
+    }
+
+    private void updateDirection(float x, float y) {
+        float dx = x - dpadCenterX;
+        float dy = y - dpadCenterY;
+        if (Math.abs(dx) < DEAD_ZONE && Math.abs(dy) < DEAD_ZONE) {
+            direction = null;
+        } else if (Math.abs(dx) > Math.abs(dy)) {
+            direction = dx > 0 ? Direction.RIGHT : Direction.LEFT;
+        } else {
+            direction = dy > 0 ? Direction.DOWN : Direction.UP;
+        }
     }
 
     public void onTouchEvent(MotionEvent event) {
@@ -37,9 +51,7 @@ public class TouchController {
                 if (ex < fireZoneBoundary) {
                     if (dpadPointerId == -1) {
                         dpadPointerId = pointerId;
-                        dpadOriginX = ex;
-                        dpadOriginY = ey;
-                        direction = null;
+                        updateDirection(ex, ey);
                     }
                 } else {
                     if (firePointerId == -1) {
@@ -53,15 +65,7 @@ public class TouchController {
                 for (int i = 0; i < event.getPointerCount(); i++) {
                     int pid = event.getPointerId(i);
                     if (pid == dpadPointerId) {
-                        float dx = event.getX(i) - dpadOriginX;
-                        float dy = event.getY(i) - dpadOriginY;
-                        if (Math.abs(dx) < DEAD_ZONE && Math.abs(dy) < DEAD_ZONE) {
-                            direction = null;
-                        } else if (Math.abs(dx) > Math.abs(dy)) {
-                            direction = dx > 0 ? Direction.RIGHT : Direction.LEFT;
-                        } else {
-                            direction = dy > 0 ? Direction.DOWN : Direction.UP;
-                        }
+                        updateDirection(event.getX(i), event.getY(i));
                     }
                 }
                 break;

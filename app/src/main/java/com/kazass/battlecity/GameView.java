@@ -67,20 +67,40 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
         // Spawn initial batch
         for (int i = 0; i < Math.min(Constants.MAX_ENEMIES_ON_MAP, Constants.TOTAL_ENEMIES); i++) {
-            spawnEnemy();
+            if (!spawnEnemy()) break;
         }
     }
 
-    private void spawnEnemy() {
-        if (enemiesSpawned >= Constants.TOTAL_ENEMIES) return;
-        int col = Constants.ENEMY_SPAWN_COLS[spawnIndex % Constants.ENEMY_SPAWN_COLS.length];
-        spawnIndex++;
+    /** Spawns at the next free entry point. Returns false when every entry is blocked. */
+    private boolean spawnEnemy() {
+        if (enemiesSpawned >= Constants.TOTAL_ENEMIES) return false;
         int ts = Constants.TILE_SIZE;
-        float ex = col * ts + (ts - ts * Constants.TANK_SIZE_RATIO) / 2f;
-        float ey = (ts - ts * Constants.TANK_SIZE_RATIO) / 2f;
-        int type = (enemiesSpawned % 5 == 4) ? 1 : 0; // every 5th is fast
-        enemies.add(new EnemyTank(ex, ey, type));
-        enemiesSpawned++;
+        float tankSize = ts * Constants.TANK_SIZE_RATIO;
+        float ey = (ts - tankSize) / 2f;
+
+        for (int attempt = 0; attempt < Constants.ENEMY_SPAWN_COLS.length; attempt++) {
+            int col = Constants.ENEMY_SPAWN_COLS[spawnIndex % Constants.ENEMY_SPAWN_COLS.length];
+            spawnIndex++;
+            float ex = col * ts + (ts - tankSize) / 2f;
+
+            boolean occupied = player != null && player.alive
+                    && player.intersects(ex, ey, ex + tankSize, ey + tankSize);
+            if (!occupied) {
+                for (EnemyTank enemy : enemies) {
+                    if (enemy.alive && enemy.intersects(ex, ey, ex + tankSize, ey + tankSize)) {
+                        occupied = true;
+                        break;
+                    }
+                }
+            }
+            if (occupied) continue;
+
+            int type = (enemiesSpawned % 5 == 4) ? 1 : 0; // every 5th is fast
+            enemies.add(new EnemyTank(ex, ey, type));
+            enemiesSpawned++;
+            return true;
+        }
+        return false;
     }
 
     // ──────────────────────────────────────────────
@@ -180,8 +200,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         // Spawn more enemies
         int aliveCount = enemies.size();
         while (aliveCount < Constants.MAX_ENEMIES_ON_MAP
-                && enemiesSpawned < Constants.TOTAL_ENEMIES) {
-            spawnEnemy();
+                && enemiesSpawned < Constants.TOTAL_ENEMIES
+                && spawnEnemy()) {
             aliveCount++;
         }
 
@@ -219,7 +239,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
         // Compute tile size to fill width
         Constants.TILE_SIZE = screenWidth / Constants.MAP_COLS;
-        controller.setScreenWidth(screenWidth);
+        controller.setScreenSize(screenWidth, screenHeight,
+                Constants.MAP_ROWS * Constants.TILE_SIZE);
 
         initGame();
 
@@ -233,7 +254,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         screenWidth  = width;
         screenHeight = height;
         Constants.TILE_SIZE = width / Constants.MAP_COLS;
-        controller.setScreenWidth(width);
+        controller.setScreenSize(width, height,
+                Constants.MAP_ROWS * Constants.TILE_SIZE);
     }
 
     @Override
